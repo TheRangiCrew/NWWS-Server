@@ -1,11 +1,13 @@
 import { client, xml } from '@xmpp/client';
 import { processProduct } from './scripts/product';
+import * as dotenv from 'dotenv'
+dotenv.config()
 
 const xmpp = client({
     domain: 'nwws-oi.weather.gov',
     service: 'xmpps://nwws-oi.weather.gov',
-    username: 'wind.088',
-    password: 'a3qY8m$',
+    username: process.env.NWWS_USER,
+    password: process.env.NWWS_PASS,
 }).setMaxListeners(0);
 
 xmpp.on("error", (err) => {
