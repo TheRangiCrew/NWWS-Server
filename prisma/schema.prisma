@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model AlertActions {
+  id           String         @id @unique @default(uuid())
+  name         String         @unique
+  code         String         @unique
+  AlertHistory AlertHistory[]
+  Alerts       Alerts[]
+}
+
+model AlertClass {
+  id           String         @id @unique @default(uuid())
+  name         String         @unique
+  code         String         @unique
+  AlertHistory AlertHistory[]
+  Alerts       Alerts[]
+}
+
+model AlertPhenomena {
+  id           String         @id(map: "AlertEvent_pkey") @unique @default(uuid())
+  name         String         @unique(map: "AlertEvent_name_key")
+  code         String         @unique(map: "AlertEvent_code_key")
+  AlertHistory AlertHistory[]
+  Alerts       Alerts[]
+}
+
+model AlertSignificance {
+  id           String         @id @unique @default(uuid())
+  name         String
+  code         String         @unique
+  AlertHistory AlertHistory[]
+  Alerts       Alerts[]
+}
+
+model Alerts {
+  id                String            @id @unique
+  created_at        DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  updated_at        DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  awips             String
+  vtec              String
+  vtecProductClass  String
+  vtecAction        String
+  vtecWFO           String
+  vtecPhenomena     String
+  vtecSignificance  String
+  vtecEventNumber   Int
+  end               DateTime?         @db.Timestamptz(6)
+  expires           DateTime?         @db.Timestamptz(6)
+  issued            DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start             DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  AlertHistory      AlertHistory[]
+  AlertActions      AlertActions      @relation(fields: [vtecAction], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertPhenomena    AlertPhenomena    @relation(fields: [vtecPhenomena], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertClass        AlertClass        @relation(fields: [vtecProductClass], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertSignificance AlertSignificance @relation(fields: [vtecSignificance], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  WFOData           WFOData           @relation(fields: [vtecWFO], references: [code], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model AlertHistory {
+  id                    String            @id @unique @default(uuid())
+  created_at            DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  updated_at            DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  wmoHeader             String
+  vtec                  String
+  vtecProductClass      String
+  vtecAction            String
+  vtecWFO               String
+  vtecPhenomena         String
+  vtecSignificance      String
+  vtecEventNumber       Int
+  eas                   Boolean           @default(false)
+  geometry              Json?             @db.Json
+  headlines             Json?             @db.Json
+  tml                   String?
+  tmlTime               DateTime?
+  tmlMotion             Int?
+  tmlLocation           Json?             @db.Json
+  hazard                String?
+  source                String?
+  impact                String?
+  ppa                   String?
+  emergency             Boolean           @default(false)
+  pds                   Boolean           @default(false)
+  windThreatTag         String?
+  windMaxTag            String?
+  hailThreatTag         String?
+  hailMaxTag            String?
+  thunderstormThreatTag String?
+  tornadoThreatTag      String?
+  tornadoTag            String?
+  issued                DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  start                 DateTime          @default(dbgenerated("(now() AT TIME ZONE 'utc'::text)")) @db.Timestamptz(6)
+  end                   DateTime?         @db.Timestamptz(6)
+  expires               DateTime?         @db.Timestamptz(6)
+  ugc                   String
+  alertID               String
+  text                  String
+  Alerts                Alerts            @relation(fields: [alertID], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  AlertActions          AlertActions      @relation(fields: [vtecAction], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertPhenomena        AlertPhenomena    @relation(fields: [vtecPhenomena], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertClass            AlertClass        @relation(fields: [vtecProductClass], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertSignificance     AlertSignificance @relation(fields: [vtecSignificance], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  WFOData               WFOData           @relation(fields: [vtecWFO], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  AlertUGC              AlertUGC[]        @relation("AlertUGC_AlertHistory")
+}
+
+model AlertUGC {
+  id         String       @id @unique @default(uuid())
+  countyFIPS String
+  alert      String
+  Alert      AlertHistory @relation("AlertUGC_AlertHistory", fields: [alert], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  CountyFIPS CountyFIPS   @relation("AlertUGC_CountyFIPS", fields: [countyFIPS], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model CountyFIPS {
+  id                                       String     @id @unique
+  name                                     String
+  numRaw                                   String     @unique
+  number                                   Int
+  state                                    String
+  stateNum                                 Int
+  AlertUGC                                 AlertUGC[] @relation("AlertUGC_CountyFIPS")
+  StateFIPS_CountyFIPS_stateNumToStateFIPS StateFIPS  @relation("CountyFIPS_stateNumToStateFIPS", fields: [stateNum], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  StateFIPS_CountyFIPS_stateToStateFIPS    StateFIPS  @relation("CountyFIPS_stateToStateFIPS", fields: [state], references: [abbreviation], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model StateFIPS {
+  id                                        Int          @id @unique
+  name                                      String       @unique
+  abbreviation                              String       @unique
+  CountyFIPS_CountyFIPS_stateNumToStateFIPS CountyFIPS[] @relation("CountyFIPS_stateNumToStateFIPS")
+  CountyFIPS_CountyFIPS_stateToStateFIPS    CountyFIPS[] @relation("CountyFIPS_stateToStateFIPS")
+  WFOData                                   WFOData[]
+}
+
+model WFOData {
+  name         String
+  state        String
+  code         String         @unique
+  id           String         @id @unique @db.Uuid
+  AlertHistory AlertHistory[]
+  Alerts       Alerts[]
+  StateFIPS    StateFIPS      @relation(fields: [state], references: [abbreviation], onDelete: NoAction, onUpdate: NoAction)
+}

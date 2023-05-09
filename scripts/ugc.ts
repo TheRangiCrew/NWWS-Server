@@ -1,44 +1,67 @@
-import fs from 'fs'
+import { DateTime } from 'luxon'
 
-interface County {
-    number: number,
-    name: string,
-    abbr: string
-}
+type States = {
+    name: string
+    type: string
+    counties: number[]
+}[]
 
 export class UGC {
     #original: string
-    #state: string
-    #type: string
-    #counties: number[]
-    #time: string
+    #states: States
+    #time: Date
 
 
     constructor(ugc: string) {
+        // Examples
+        // TXC009-077-485-070100-
+        // OKC141-TXC487-070030-
+
         this.#original = ugc
 
-        let array = this.#original.split("-")
+        
+        let array = this.#original.split("-");
+        array.pop();
 
-        this.#state = array[0].slice(0,2)
-        this.#type = array[0].slice(2,3)
+        this.#states = [];
+        this.#time = DateTime.now().toJSDate()
 
-        array[0] = array[0].slice(3, array[0].length)
+        let currentIndex = -1;
 
-        this.#time = array[array.length-1]
+        array.forEach((element) => {
+            if (element.match(/([A-Z])/g) != null) {
+                this.#states.push({
+                    name: element.substring(0, 2),
+                    type: element.substring(2,3),
+                    counties: []
+                })
+                currentIndex++;
+                if (element.match(/(>)/g) != null) {
+                    const start = Number(element.substring(3,6))
+                    const end = Number(element.substring(7, 10))
 
-        array.pop()
+                    for (let i = start; i <= end; i++) {
+                        this.#states[currentIndex].counties.push(i)
+                    }
+                } else {
+                    this.#states[currentIndex].counties.push(Number(element.substring(3,6)))
+                }
+            } else if (element.length === 6) {
+                const day = Number(element.substring(0,2));
+                const hour = Number(element.substring(2,4));
+                const minute = Number(element.substring(4,6));
 
-        this.#counties = array.map((element) => {
-            return Number(element)
+                this.#time = DateTime.now().set({day, hour, minute, second: 0, millisecond: 0 }).toJSDate()
+            } else {
+                this.#states[currentIndex].counties.push(Number(element));
+            }
         })
     }
 
     get = () => {
         return {
             original: this.#original,
-            state: this.#state,
-            type: this.#type,
-            counties: this.#counties,
+            states: this.#states,
             time: this.#time
         }
     }

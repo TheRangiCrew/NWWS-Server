@@ -1,6 +1,6 @@
 export interface TML {
     original: string,
-    time: string,
+    time: {hour: number, minute: number},
     trajectory: number,
     speed: number,
     location: number[]
@@ -19,12 +19,13 @@ export const tml = {
         data.shift()
         let time = data[0].split('')
         time.pop()
+        console.log(data)
 
         return {
             original,
-            time: `${time[0] + time[1]}:${time[2] + time[3]}`,
+            time: {hour: Number(data[0].slice(0,2)), minute: Number(data[0].slice(2, 4))},
             trajectory: Number(data[1].slice(0,3)),
-            speed: Number(data[2].slice(0,2)),
+            speed: Number(data[2].match(/([0-9]+)/g)),
             location: [Number(data[3])/100, Number(data[4])/100]
         }
     }

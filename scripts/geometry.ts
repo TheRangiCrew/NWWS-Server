@@ -7,7 +7,7 @@ export const geometry = {
         }
         const newstring = string.slice(index + 9, string.length)
         const end = newstring.search(/[^\s0-9]/g)
-        const stringdata = newstring.slice(0, end).split(/[\s]/g).filter((element) => element.length === 4)
+        const stringdata = newstring.slice(0, end).split(/[\s]/g).filter((element) => element.length >= 4)
 
         const coordinates = []
 
