@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { LatLon, LatLonObject } from "../latlon";
-import { VTECSegment, VTECSegmentObject } from "./vtecSegment";
+import { VTECSegment, VTECSegmentObject, createVTECSegments } from "./vtecSegment";
 import { TML, TMLObject } from "../tml";
 import { VTEC, VTECObject } from "../vtec";
 
@@ -126,13 +126,8 @@ export class SevereSegment extends VTECSegment {
     get toObject(): SevereSegmentObject {
         return {
             original: this.original,
-            ugc: this.ugc.toObject,
-            counties_zones: this.ugc.toDBObject.counties,
-            vtec: this.vtec.toObject,
             headlines: this.headlines,
             cta: this.cta,
-            issued: this.issued.toJSDate(),
-            expires: this.expires.toJSDate(),
             latlon: this.#latlon.original,
             polygon: this.#latlon.toGEOJson,
             tml: this.#tml.toObject,
@@ -155,25 +150,129 @@ export class SevereSegment extends VTECSegment {
 
 }
 
+export const createSevereVTECSegments = (text: string) => {
+
+    const vtecSegment = createVTECSegments(text)
+
+    return vtecSegment.map(v => {
+        const latlon = new LatLon(text);
+
+        const tml = new TML(text);
+
+        const emergency = text.match(/EMERGENCY/g) != null;
+        const pds = text.match(/PARTICULARLY DANGEROUS SITUATION/g) != null;
+
+        let segment: SevereSegmentObject = {
+            ...v,
+            latlon: latlon.original,
+            polygon: latlon.toGEOJson,
+            tml: tml.original,
+            hazard: null,
+            source: null,
+            impact: null,
+            tornado: null,
+            tags: {
+                tornado_damage: null,
+                thunderstorm_damage: null,
+                hail_threat: null,
+                hail_max: null,
+                wind_threat: null,
+                wind_max: null,
+            },
+            emergency,
+            pds,
+
+        }
+
+        const hazardregex = /HAZARD\.\.\./g
+        const hazardindex = text.search(hazardregex);
+        if (hazardindex != -1) {
+            let hazard = text.slice(hazardindex, text.length);
+            hazard = hazard.slice(0, hazard.search("\n\n"));
+            segment.hazard = hazard.split(hazardregex)[1].replace(/(^ {2,}|\.$)/gm, "").replace(/\n/g, " ");
+        }
+
+        const sourceregex = /SOURCE\.\.\./g
+        const sourceindex = text.search(sourceregex);
+        if (sourceindex != -1) {
+            let source = text.slice(sourceindex, text.length);
+            source = source.slice(0, source.search("\n\n"));
+            segment.source = source.split(sourceregex)[1].replace(/(^ {2,}|\.$)/gm, "").replace(/\n/g, " ");
+        }
+
+        const impactregex = /IMPACT\.\.\.|IMPACTS\.\.\./gm
+        const impactindex = text.search(impactregex);
+        if (impactindex != -1) {
+            let impact = text.slice(impactindex, text.length);
+            impact = impact.slice(0, impact.search("\n\n")).trim();
+            segment.impact = impact.split(impactregex)[1].replace(/(^ {2,}|\.$)/gm, "").replace(/\n/g, " ");
+        }
+
+        const tormatch = text.match(/TORNADO\.\.\..*/g)
+        if (tormatch != null) {
+            const arr = tormatch[0].split("...");
+            segment.tornado = TOR.valueOf(arr[1]);
+        }
+
+        const tordmgmatch = text.match(/TORNADO DAMAGE THREAT\.\.\..*/g)
+        if (tordmgmatch != null) {
+            const arr = tordmgmatch[0].split("...");
+            segment.tags.tornado_damage = TORDMG.valueOf(arr[1]);
+        }
+
+        const tstmdmgmatch = text.match(/THUNDERSTORM DAMAGE THREAT\.\.\..*/g)
+        if (tstmdmgmatch != null) {
+            const arr = tstmdmgmatch[0].split("...");
+            segment.tags.thunderstorm_damage = TSTMDMG.valueOf(arr[1]);
+        }
+
+        const hailthreatmatch = text.match(/HAIL THREAT\.\.\..*/g)
+        if (hailthreatmatch != null) {
+            const arr = hailthreatmatch[0].split("...");
+            segment.tags.hail_threat = HAILTHREAT.valueOf(arr[1]);
+        }
+
+        const hailmaxmatch = text.match(/MAX HAIL SIZE\.\.\..*/g)
+        if (hailmaxmatch != null) {
+            segment.tags.hail_max = hailmaxmatch[0].split("...")[1];
+        }
+
+        const windthreatmatch = text.match(/WIND THREAT\.\.\..*/g)
+        if (windthreatmatch != null) {
+            const arr = windthreatmatch[0].split("...");
+            segment.tags.wind_threat = WINDTHREAT.valueOf(arr[1]);
+        }
+
+        const windmaxmatch = text.match(/MAX WIND GUST\.\.\..*/g)
+        if (windmaxmatch != null) {
+            segment.tags.wind_max = windmaxmatch[0].split("...")[1];
+        }
+
+        return segment
+    })
+
+
+}
+
 export type SevereSegmentObject = VTECSegmentObject & {
-    vtec: VTECObject;
     latlon: string | null;
     polygon: { type: string, coordinates: number[][][] }
-    tml: TMLObject;
+    tml: string | null;
     hazard: string | null;
     source: string | null;
     impact: string | null;
     tornado: TOR | null;
-    tornado_damage: TORDMG | null;
-    thunderstorm_damage: TSTMDMG | null;
-    hail_threat: HAILTHREAT | null;
-    hail_max: string | null;
-    wind_threat: WINDTHREAT | null;
-    wind_max: string | null;
+    tags: {
+        tornado_damage: TORDMG | null;
+        thunderstorm_damage: TSTMDMG | null;
+        hail_threat: HAILTHREAT | null;
+        hail_max: string | null;
+        wind_threat: WINDTHREAT | null;
+        wind_max: string | null;
+    },
     emergency: boolean;
     pds: boolean;
-    start: Date;
-    end: Date | null;
+
 }
 
 enum TOR {

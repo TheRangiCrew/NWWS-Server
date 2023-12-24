@@ -79,11 +79,58 @@ export class VTECSegment {
 }
 
 export type VTECSegmentObject = {
-    original: string,
-    ugc: UGCObject,
-    counties_zones: string[]
-    headlines: string[],
-    cta: string | null,
-    issued: Date;
-    expires: Date;
+    original: string;
+    ugc: UGC;
+    vtec: VTEC;
+    headlines: string[];
+    cta: string | null; // Call-To-Action
+    issued: DateTime;
+    expires: DateTime;
+    start: string | null;
+    ends: string | null;
+}
+
+export const createVTECSegments = (text: string): VTECSegmentObject[] => {
+    const original = text;
+
+    const ugc = new UGC(original);
+
+    const vtec = VTEC.findAll(original)
+
+    if (vtec === null) {
+        throw new Error("VTEC Product missing VTEC")
+    }
+
+    return vtec.map(v => {
+
+        const headlinesRegex = /^(\.){3}([\w\d\s]*)(\.){3}(\n){2}/gm;
+        let headlines: string[] = [];
+        original.match(headlinesRegex)?.forEach((h) => {
+            headlines.push(h.trim());
+        })
+
+        const ctaRegex = /^(PRECAUTIONARY\/PREPAREDNESS ACTIONS\.\.\.\n)([\w\d\s,.!\n]*)(&){2}/gm;
+        let ctaMatch = original.match(ctaRegex);
+        const cta = ctaMatch === null ? null : ctaMatch[0];
+
+        const issued = DateTime.now();
+        const expires = ugc.datetime;
+
+        const start = v.start
+        const end = v.end;
+
+        return {
+            original,
+            ugc,
+            vtec: v,
+            headlines,
+            cta,
+            issued,
+            expires,
+            start: start.toISO(),
+            ends: end.toISO()
+        }
+    })
+
+
 }

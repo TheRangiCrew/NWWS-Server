@@ -2,14 +2,14 @@
 
 export class LatLon {
 
-    #original: string | null;
-    #points: number[][];
+    original: string | null;
+    points: number[][];
 
     constructor(text: string) {
-        this.#original = this.#find(text);
-        this.#points = [];
+        this.original = this.#find(text);
+        this.points = [];
 
-        const segments = this.#original?.match(/[0-9]{4,8}/g);
+        const segments = this.original?.match(/[0-9]{4,8}/g);
 
         if (segments === null || segments === undefined) {
             return;
@@ -22,7 +22,7 @@ export class LatLon {
                 if (lon < 10) {
                     lon = lon + 100;
                 }
-                this.#points.push([lon, lat]);
+                this.points.push([lon, lat]);
             })
         } else {
             for (let i = 0; i < segments.length; i += 2) {
@@ -31,7 +31,7 @@ export class LatLon {
                 if (lon <= -180) {
                     lon = lon + 360;
                 }
-                this.#points.push([lon, lat]);
+                this.points.push([lon, lat]);
             }
         }
     }
@@ -42,25 +42,17 @@ export class LatLon {
         return latlon != null ? latlon[0] : null;
     }
 
-    get original() {
-        return this.#original
-    }
-
-    get points() {
-        return this.#points
-    }
-
     get toObject(): LatLonObject {
         return {
-            original: this.#original,
-            points: this.#points
+            original: this.original,
+            points: this.points
         }
     }
 
     get toGEOJson() {
         return {
             type: "Polygon",
-            coordinates: [this.#points]
+            coordinates: [this.points]
         }
     }
 

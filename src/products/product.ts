@@ -178,6 +178,7 @@ export class Processor {
             case "SVR":
             case "TOR":
             case "SVS":
+            case "SMW":
                 vtecProduct(this.original, this)
             default:
                 return;

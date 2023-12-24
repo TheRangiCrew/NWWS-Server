@@ -1,5 +1,7 @@
+import surreal from "../../db/surreal";
 import { Processor } from "../product"
-import { SevereSegment } from "./severe";
+import { SevereSegment, SevereSegmentObject, createSevereVTECSegments } from "./severe";
+import { VTECSegment, VTECSegmentObject } from "./vtecSegment";
 
 
 const vtecProduct = async (text: string, product: Processor) => {
@@ -28,7 +30,7 @@ const vtecProduct = async (text: string, product: Processor) => {
     const idtregex = /^[0-9]{3,4} (AM|PM) [A-Z]{3,4} ([A-Za-z]{3} ){2}[0-9]{1,2} [0-9]{4}/gm;
     let issuing_datetime = text.match(idtregex)![0];
 
-    let segments: SevereSegment[] = [];
+    let segments: (VTECSegmentObject)[][] = [];
     text.split(/\$\$/g).forEach((segment) => {
         if (segment.length <= 20) {
             return;
@@ -39,15 +41,28 @@ const vtecProduct = async (text: string, product: Processor) => {
             case "TOR":
             case "SVS":
             case "SMW":
-                segments.push(new SevereSegment(segment));
+                segments.push(createSevereVTECSegments(segment));
                 break;
         }
     });
 
-    segments.forEach((segment) => {
-        const id = segment.vtec.wfo + segment.vtec.phenomena.toString() + segment.vtec.significance.toString() + segment.vtec.eventNumber.toPrecision(4) + segment.vtec.start.year
+    segments.forEach(async (segment) => {
+
+        segment.forEach(async (v) => {
+
+            const id = v.vtec.wfo + v.vtec.phenomena.toString() + v.vtec.significance.toString() + v.vtec.eventNumber.toString().padStart(4, "0") + v.vtec.start.year
+
+            const [result] = await surreal.create("vtec_segments", { ...v, vtec_id: id, vtec: v.vtec.toObject, ugc: v.ugc.toString() })
+
+            console.log(result.id)
+
+            v.ugc.toDBObject.counties.forEach(async (c) => {
+                await surreal.query(`RELATE ${result.id}->vtec_county_zones->${c};`)
+            })
+        })
 
     })
+
 }
 
 export default vtecProduct

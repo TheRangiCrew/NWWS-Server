@@ -49,6 +49,13 @@ export class VTEC {
         return vtec != null ? true : false;
     }
 
+    static findAll = (text: string) => {
+        let vtec = text.match(VTEC.regex);
+        return vtec?.map(v => {
+            return new VTEC(v)
+        }) ?? null
+    }
+
     get isNull(): boolean {
         return this.#original === null;
     }

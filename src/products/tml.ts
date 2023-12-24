@@ -23,22 +23,22 @@ type MotionObject = {
 
 export class TML {
 
-    #original: string | null;
+    original: string | null;
     #time: string | null;
     #motion: Motion | null;
     #location: number[] | null;
 
     constructor(text: string) {
-        this.#original = this.#find(text);
+        this.original = this.#find(text);
 
-        if (this.#original === null) {
+        if (this.original === null) {
             this.#time = null;
             this.#motion = null;
             this.#location = null;
             return;
         }
 
-        const segments = this.#original.split(" ");
+        const segments = this.original.split(" ");
 
 
         // Clean up array
@@ -67,7 +67,7 @@ export class TML {
 
     get toObject(): TMLObject {
         return {
-            original: this.#original,
+            original: this.original,
             time: this.#time,
             motion: this.#motion?.toObject ?? null,
             location: this.#location
